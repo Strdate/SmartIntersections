@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.329
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartIntersections", "SmartIntersections\SmartIntersections.csproj", "{67557FED-24EF-40C2-8A79-590E2EC9B4DD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{67557FED-24EF-40C2-8A79-590E2EC9B4DD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{67557FED-24EF-40C2-8A79-590E2EC9B4DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{67557FED-24EF-40C2-8A79-590E2EC9B4DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{67557FED-24EF-40C2-8A79-590E2EC9B4DD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {FA2EFA52-C51B-412D-8D01-2FECD2A04850}
+	EndGlobalSection
+EndGlobal
