@@ -3,6 +3,7 @@ using ColossalFramework.Math;
 using Harmony;
 using SmartIntersections.Tools;
 using SmartIntersections.Utils;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
@@ -42,9 +43,14 @@ namespace SmartIntersections.Detours
             {
                 //Debug.Log("Releasing segment " + segment);
                 NetSegment netSegment = NetAccess.GetSegment(segment);
+
+                // We keep untouchable segments
+                if ((netSegment.m_flags & NetSegment.Flags.Untouchable) != NetSegment.Flags.None)
+                    continue;
+
                 bool inverted = ((netSegment.m_flags & NetSegment.Flags.Invert) != NetSegment.Flags.None);
 
-                borderNodes.Add(new ConnectionPoint(netSegment.m_startNode,netSegment.m_startDirection,netSegment.Info, inverted));
+                borderNodes.Add(new ConnectionPoint(netSegment.m_startNode, netSegment.m_startDirection, netSegment.Info, inverted));
                 borderNodes.Add(new ConnectionPoint(netSegment.m_endNode, netSegment.m_endDirection, netSegment.Info, !inverted));
                 NetAccess.ReleaseSegment(segment, true);
             }
@@ -56,6 +62,79 @@ namespace SmartIntersections.Detours
             //Debug.Log("Border nodes (1): " + borderNodes.Count);
 
             return borderNodes;
+        }
+
+        // Solved by ReleaseQuestionableSegments
+        /*private static void CheckSplitSegmentAngle(ref NetTool.ControlPoint point, FastList<ushort> createdSegments, HashSet<ConnectionPoint> borderNodes)
+        {
+            if(point.m_segment != 0)
+            {
+                if (createdSegments.Contains(point.m_segment))
+                    return;
+
+                if (point.m_node != 0)
+                    return;
+
+                Debug.Log("CheckSplitSegmentAngle: Snapping detected");
+                NetSegment netSegment = NetAccess.GetSegment(point.m_segment);
+                netSegment.GetClosestPositionAndDirection(point.m_position, out Vector3 pos, out Vector3 dir);
+                float angle = Vector3.Angle(point.m_direction, dir);
+                if(angle < 5 || 180 - angle < 5)
+                {
+                    Debug.Log("CheckSplitSegmentAngle: Releasing (" + angle + " deg)");
+                    bool inverted = ((netSegment.m_flags & NetSegment.Flags.Invert) != NetSegment.Flags.None);
+                    ConnectionPoint p1 = new ConnectionPoint(netSegment.m_startNode, netSegment.m_startDirection, netSegment.Info, inverted);
+                    ConnectionPoint p2 = new ConnectionPoint(netSegment.m_endNode, netSegment.m_endDirection, netSegment.Info, !inverted);
+                    NetAccess.ReleaseSegment(point.m_segment, true);
+                    if(NetAccess.ExistsNode(p1.Node) && NetAccess.ExistsNode(p2.Node))
+                    {
+                        borderNodes.Add(p1);
+                        borderNodes.Add(p2);
+                    }
+                }
+            }
+        }*/
+
+        /* Sometimes the intersection end snaps to an existing road. But it can happen that the intersection road and the road it snaps to are (more or
+         * less) parallel. Then we are left with a piece of old road overlapping the new road because the old segment for some reason doesn't show up as
+         * colliding. We have to find it and release it. I think that it shouldn't happen more than once per intersection tho. */
+        private static void ReleaseQuestionableSegments(FastList<ushort> newNodes, FastList<ushort> newSegments)
+        {
+            foreach (ushort node in newNodes)
+            {
+                NetNode netNode = NetAccess.GetNode(node);
+                ushort foundSegment = 0;
+                for (int i = 0; i < 8; i++)
+                {
+                    ushort segment = netNode.GetSegment(i);
+                    if (segment != 0 && newSegments.Contains(segment))
+                    {
+                        if (foundSegment != 0)
+                            goto continueOuterLoop;
+                        else
+                            foundSegment = segment;
+                    }
+                }
+
+                Vector3 direction = NetAccess.GetSegment(foundSegment).GetDirection(node);
+                for (int i = 0; i < 8; i++)
+                {
+                    ushort segment = netNode.GetSegment(i);
+                    if (segment != 0 && segment != foundSegment)
+                    {
+                        float angle = Vector3.Angle(direction, NetAccess.GetSegment(segment).GetDirection(node));
+                        if (angle < 10)
+                        {
+                            //Debug.Log("Releasing questionable segment " + segment);
+                            NetAccess.ReleaseSegment(segment);
+                            goto breakOuterLoop;
+                        }
+                    }
+                }
+
+                continueOuterLoop:;
+            }
+            breakOuterLoop:;
         }
 
         /* === STOCK CODE START === */
@@ -120,6 +199,8 @@ namespace SmartIntersections.Detours
                         }*/
                         // ns end
 
+                        //CheckSplitSegmentAngle(ref controlPoint, instance.m_tempSegmentBuffer, borderNodes); // ns
+
                         ushort node;
                         ushort num2;
                         int num3;
@@ -140,7 +221,8 @@ namespace SmartIntersections.Detours
                             }
                             if (pathInfo.m_trafficLights != null && pathInfo.m_trafficLights.Length > 0)
                             {
-                                /*BuildingDecoration.*/TrafficLightsToFlags(pathInfo.m_trafficLights[0], ref instance.m_nodes.m_buffer[(int)node].m_flags);
+                                /*BuildingDecoration.*/
+                                TrafficLightsToFlags(pathInfo.m_trafficLights[0], ref instance.m_nodes.m_buffer[(int)node].m_flags);
                             }
                         }
                         for (int j = 1; j < pathInfo.m_nodes.Length; j++)
@@ -213,7 +295,8 @@ namespace SmartIntersections.Detours
                                 }
                                 if (pathInfo.m_trafficLights != null && pathInfo.m_trafficLights.Length > j)
                                 {
-                                    /*BuildingDecoration.*/TrafficLightsToFlags(pathInfo.m_trafficLights[j], ref instance.m_nodes.m_buffer[(int)num7].m_flags);
+                                    /*BuildingDecoration.*/
+                                    TrafficLightsToFlags(pathInfo.m_trafficLights[j], ref instance.m_nodes.m_buffer[(int)num7].m_flags);
                                 }
                                 if (pathInfo.m_yieldSigns != null && pathInfo.m_yieldSigns.Length >= j * 2)
                                 {
@@ -290,6 +373,7 @@ namespace SmartIntersections.Detours
                         }
                     }
                 }
+                ReleaseQuestionableSegments(instance.m_tempNodeBuffer, instance.m_tempSegmentBuffer); // ns
                 new MakeConnections(borderNodes, instance.m_tempNodeBuffer); // ns
                 instance.m_tempNodeBuffer.Clear();
                 instance.m_tempSegmentBuffer.Clear();
