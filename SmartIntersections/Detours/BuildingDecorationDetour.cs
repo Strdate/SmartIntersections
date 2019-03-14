@@ -1,6 +1,6 @@
 ﻿using ColossalFramework;
 using ColossalFramework.Math;
-using Harmony;
+using Redirection;
 using SmartIntersections.Tools;
 using SmartIntersections.Utils;
 using System;
@@ -13,23 +13,24 @@ namespace SmartIntersections.Detours
     /* Hooks to BuildingDecoration.LoadPaths to intercept intersection/toll both creation. When triggered it deletes the overlapping segments
      * and obrains the list of new ones. Then MakeConnections class is called to connect the roads */
 
+    [TargetType(typeof(BuildingDecoration))]
     public class BuildingDecorationDetour
     {
         #region DETOUR
 
-        public static void Apply(HarmonyInstance harmony)
+        /*public static void Apply(HarmonyInstance harmony)
         {
             var fix = typeof(BuildingDecorationDetour).GetMethod("LoadPaths");
             harmony.Patch(OriginalMethod, new HarmonyMethod(fix), null, null);
 
-        }
+        }*/
 
         /*public static void Revert(HarmonyInstance harmony)
         {
             harmony.Unpatch(OriginalMethod, HarmonyPatchType.Prefix);
         }*/
 
-        private static MethodInfo OriginalMethod => typeof(BuildingDecoration).GetMethod("LoadPaths");
+        /*private static MethodInfo OriginalMethod => typeof(BuildingDecoration).GetMethod("LoadPaths");*/
 
         #endregion DETOUR
 
@@ -139,12 +140,20 @@ namespace SmartIntersections.Detours
 
         /* === STOCK CODE START === */
 
+        [RedirectMethod]
         public static bool LoadPaths(BuildingInfo info, ushort buildingID, ref Building data, float elevation)
         {
             if (info.m_paths != null)
             {
-                HashSet<ConnectionPoint> borderNodes = ReleaseCollidingSegments(); // ns
-                //Debug.Log("LoadPaths detour");
+                // ns start
+                HashSet<ConnectionPoint> borderNodes = null;
+                if (info.m_paths.Length > 0)
+                {
+                    //Debug.Log("LoadPaths detour");
+                    borderNodes = ReleaseCollidingSegments();
+                }
+                // ns end
+
                 NetManager instance = Singleton<NetManager>.instance;
                 instance.m_tempNodeBuffer.Clear();
                 instance.m_tempSegmentBuffer.Clear();
@@ -373,8 +382,13 @@ namespace SmartIntersections.Detours
                         }
                     }
                 }
-                ReleaseQuestionableSegments(instance.m_tempNodeBuffer, instance.m_tempSegmentBuffer); // ns
-                new MakeConnections(borderNodes, instance.m_tempNodeBuffer); // ns
+                // ns start
+                if (info.m_paths.Length > 0)
+                {
+                    ReleaseQuestionableSegments(instance.m_tempNodeBuffer, instance.m_tempSegmentBuffer);
+                    new MakeConnections(borderNodes, instance.m_tempNodeBuffer);
+                }
+                // ns end    
                 instance.m_tempNodeBuffer.Clear();
                 instance.m_tempSegmentBuffer.Clear();
             }

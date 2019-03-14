@@ -1,4 +1,4 @@
-﻿using Harmony;
+﻿using Redirection;
 using SmartIntersections.Detours;
 using UnityEngine;
 
@@ -11,7 +11,7 @@ namespace SmartIntersections
         public static SmartIntersections instance;
         public static readonly string HarmonyID = "strad.smartintersections";
 
-        private HarmonyInstance _harmony;
+        //private HarmonyInstance _harmony;
 
         private bool m_tempAnarchy;
         private bool m_tempCollision;
@@ -33,15 +33,17 @@ namespace SmartIntersections
                     {
                         //Debug.Log("Deploying detour...");
                         SetupAnarchy();
-                        ToolControllerDetour.Apply(_harmony);
-                        //NetManagerDetour.Apply(_harmony);
-                        //NetToolDetour.Apply(_harmony);
-                        BuildingDecorationDetour.Apply(_harmony);
+                        //ToolControllerDetour.Apply(_harmony);
+                        //BuildingDecorationDetour.Apply(_harmony);
+                        Redirector<ToolControllerDetour>.Deploy();
+                        Redirector<BuildingDecorationDetour>.Deploy();
                     }
                     else
                     {
                         //Debug.Log("Reverting detour...");
-                        _harmony.UnpatchAll(HarmonyID);
+                        Redirector<BuildingDecorationDetour>.Revert();
+                        Redirector<ToolControllerDetour>.Revert();
+                        //_harmony.UnpatchAll(HarmonyID);
                         // ToolControllerDetour.Revert(_harmony);
                         //NetManagerDetour.Revert(_harmony);
                         //NetToolDetour.Revert(_harmony);
@@ -55,7 +57,7 @@ namespace SmartIntersections
         public SmartIntersections()
         {
             instance = this;
-            _harmony = HarmonyInstance.Create(HarmonyID);
+            //_harmony = HarmonyInstance.Create(HarmonyID);
         }
 
         private void SetupAnarchy()
@@ -77,7 +79,9 @@ namespace SmartIntersections
 
         public void OnDestroy()
         {
-            _harmony.UnpatchAll(HarmonyID);
+            Redirector<BuildingDecorationDetour>.Revert();
+            Redirector<ToolControllerDetour>.Revert();
+            //_harmony.UnpatchAll(HarmonyID);
             /*ToolControllerDetour.Revert(_harmony);
             NetManagerDetour.Revert(_harmony);
             NetToolDetour.Revert(_harmony);*/
