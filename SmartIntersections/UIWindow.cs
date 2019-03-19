@@ -10,12 +10,12 @@ namespace SmartIntersections
     {
         public static UIWindow instance;
 
+        private UIDropDown m_dropDown;
         private UICheckBox m_enabledCheckBox;
-        private UICheckBox m_snappingCheckBox;
         public UICheckBox m_connectRoadsCheckBox;
 
         public static readonly SavedBool SavedEnabled = new SavedBool("savedEnabled", ModInfo.SettingsFileName, true, true);
-        public static readonly SavedBool SavedSnapping = new SavedBool("savedSnapping", ModInfo.SettingsFileName, true, true);
+        public static readonly SavedInt SavedSnapping = new SavedInt("savedSnapping", ModInfo.SettingsFileName, 0, true);
         public static readonly SavedBool SavedConnectRoads = new SavedBool("savedConnectRoads", ModInfo.SettingsFileName, true, true);
 
         private UIComponent m_intersectionPanel;
@@ -31,6 +31,13 @@ namespace SmartIntersections
         public override void Start()
         {
             name = "SmartIntersectionsPanel";
+
+            if (!ModLoadingExtension.roadAnarchyDetected)
+            {
+                enabled = false;
+                return;
+            }
+
             atlas = ResourceLoader.GetAtlas("Ingame");
             backgroundSprite = "SubcategoriesPanel";
             size = new Vector2(204, 100);
@@ -67,6 +74,7 @@ namespace SmartIntersections
             label.relativePosition = new Vector2(8, cumulativeHeight);
             label.SendToBack();
             cumulativeHeight += label.height + 8;
+            dragHandle.height = cumulativeHeight;
 
             m_enabledCheckBox = UI.CreateCheckBox(this);
             m_enabledCheckBox.name = "SI_Enabled";
@@ -81,19 +89,6 @@ namespace SmartIntersections
             };
             cumulativeHeight += m_enabledCheckBox.height + 8;
 
-            m_snappingCheckBox = UI.CreateCheckBox(this);
-            m_snappingCheckBox.name = "SI_Snapping";
-            m_snappingCheckBox.label.text = "Snapping";
-            m_snappingCheckBox.tooltip = "Snap to existing roads";
-            m_snappingCheckBox.isChecked = SavedSnapping.value;
-            m_snappingCheckBox.relativePosition = new Vector3(8, cumulativeHeight);
-            m_snappingCheckBox.eventCheckChanged += (c, state) =>
-            {
-                AnarchySnapping = state;
-                SavedSnapping.value = state;
-            };
-            cumulativeHeight += m_snappingCheckBox.height + 8;
-
             m_connectRoadsCheckBox = UI.CreateCheckBox(this);
             m_connectRoadsCheckBox.name = "SI_ConnectRoads";
             m_connectRoadsCheckBox.label.text = "Connect roads";
@@ -106,14 +101,30 @@ namespace SmartIntersections
             };
             cumulativeHeight += m_connectRoadsCheckBox.height + 8;
 
-            height = cumulativeHeight;
-            dragHandle.height = height;
-            //absolutePosition = ModInfo.defWindowPosition;
+            label = AddUIComponent<UILabel>();
+            label.textScale = 0.9f;
+            label.text = "Snapping";
+            label.relativePosition = new Vector2(8, cumulativeHeight);
+            label.SendToBack();
+            cumulativeHeight += label.height + 8;
 
-            if (ModLoadingExtension.roadAnarchyDetected == false)
+            m_dropDown = UI.CreateDropDown(this);
+            m_dropDown.AddItem("Enabled");
+            m_dropDown.AddItem("Low");
+            m_dropDown.AddItem("Off");
+            m_dropDown.relativePosition = new Vector3(8, cumulativeHeight);
+            m_dropDown.width = width - 16;
+            m_dropDown.eventSelectedIndexChanged += (component, state) =>
             {
-                enabled = false;
-            }
+                SmartIntersections.instance.Snapping = (SmartIntersections.SnappingMode) state;
+                SavedSnapping.value = state;
+            };
+            m_dropDown.selectedIndex = SavedSnapping.value;
+            m_dropDown.listPosition = UIDropDown.PopupListPosition.Above;
+            cumulativeHeight += m_dropDown.height + 8;
+
+            height = cumulativeHeight;
+            //absolutePosition = ModInfo.defWindowPosition;
 
             m_intersectionPanel = UIView.Find("RoadsIntersectionPanel");
             m_intersectionPanel.eventVisibilityChanged += (comp, value) =>
@@ -129,15 +140,10 @@ namespace SmartIntersections
             };
         }
 
-        private bool AnarchySnapping
-        {
-            get => FineRoadAnarchy.FineRoadAnarchy.snapping;
-            set => FineRoadAnarchy.FineRoadAnarchy.snapping = value;
-        }
-
         /* Activates the tool if window is visible and the 'Enabled' checkbox checked */
         protected override void OnVisibilityChanged()
         {
+            SmartIntersections.instance.WindowOnScreen = isVisible;
             SmartIntersections.instance.Active = isVisible && SavedEnabled;
         }
     }

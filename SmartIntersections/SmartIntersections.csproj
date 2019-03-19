@@ -60,6 +60,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Detours\BuildingDecorationDetour.cs" />
+    <Compile Include="Detours\NetInfoDetour.cs" />
     <Compile Include="Detours\ToolControllerDetour.cs" />
     <Compile Include="ModInfo.cs" />
     <Compile Include="ModLoadingExtension.cs" />

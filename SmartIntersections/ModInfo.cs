@@ -8,7 +8,7 @@ namespace SmartIntersections
     public class ModInfo : IUserMod
     {
         public static readonly string SettingsFileName = "SmartIntersections";
-        public static readonly string VERSION = "BETA 0.1.1";
+        public static readonly string VERSION = "BETA 0.2.0";
 
         public string Name => "Smart Intersection Builder";
 

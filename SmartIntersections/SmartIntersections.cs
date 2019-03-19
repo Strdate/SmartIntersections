@@ -15,7 +15,32 @@ namespace SmartIntersections
 
         private bool m_tempAnarchy;
         private bool m_tempCollision;
-        private bool m_tempSnapping;
+
+        private bool m_windowOnScreen;
+        public bool WindowOnScreen
+        {
+            get => m_windowOnScreen;
+            set
+            {
+                if (!ModLoadingExtension.roadAnarchyDetected)
+                    return;
+
+                if(value != m_windowOnScreen)
+                {
+                    m_windowOnScreen = value;
+                    if(value)
+                    {
+                        FineRoadAnarchy.Redirection.Redirector<FineRoadAnarchy.Detours.NetInfoDetour>.Revert();
+                        ApplySnapping();
+                    }
+                    else
+                    {
+                        ApplySnapping();
+                        FineRoadAnarchy.Redirection.Redirector<FineRoadAnarchy.Detours.NetInfoDetour>.Deploy();
+                    }
+                }
+            }
+        }
 
         private bool m_active = false;
         public bool Active
@@ -54,6 +79,42 @@ namespace SmartIntersections
             }
         }
 
+        private SnappingMode m_snapping;
+        public SnappingMode Snapping
+        {
+            get => (WindowOnScreen ? m_snapping : 0);
+            set
+            {
+                if(value != m_snapping)
+                {
+                    m_snapping = value;
+                    ApplySnapping();
+                }
+            }
+        }
+
+        private void ApplySnapping()
+        {
+            //Debug.Log("Is anarchy snapping deployed? " + FineRoadAnarchy.Redirection.Redirector<FineRoadAnarchy.Detours.NetInfoDetour>.IsDeployed());
+            //Debug.Log("Apply snapping: value - " + Snapping);
+            if(Snapping == SnappingMode.Low)
+            {
+                NetInfoDetour.MinNodeDistance = 3f;
+            } else if(Snapping == SnappingMode.Off)
+            {
+                NetInfoDetour.MinNodeDistance = 0f;
+            }
+
+            if(Snapping == SnappingMode.Enabled)
+            {
+                Redirector<NetInfoDetour>.Revert();
+            }
+            else
+            {
+                Redirector<NetInfoDetour>.Deploy();
+            }
+        }
+
         public SmartIntersections()
         {
             instance = this;
@@ -65,16 +126,13 @@ namespace SmartIntersections
             m_tempAnarchy = FineRoadAnarchy.FineRoadAnarchy.anarchy;
             FineRoadAnarchy.FineRoadAnarchy.anarchy = true;
             m_tempCollision = FineRoadAnarchy.FineRoadAnarchy.collision;
-            FineRoadAnarchy.FineRoadAnarchy.collision = true;
-            m_tempSnapping = FineRoadAnarchy.FineRoadAnarchy.snapping;
-            FineRoadAnarchy.FineRoadAnarchy.snapping = UIWindow.SavedSnapping.value;
+            FineRoadAnarchy.FineRoadAnarchy.collision = true;            
         }
 
         private void RevertAnarchy()
         {
             FineRoadAnarchy.FineRoadAnarchy.anarchy = m_tempAnarchy;
             FineRoadAnarchy.FineRoadAnarchy.collision = m_tempCollision;
-            FineRoadAnarchy.FineRoadAnarchy.snapping = m_tempSnapping;
         }
 
         public void OnDestroy()
@@ -85,6 +143,13 @@ namespace SmartIntersections
             /*ToolControllerDetour.Revert(_harmony);
             NetManagerDetour.Revert(_harmony);
             NetToolDetour.Revert(_harmony);*/
+        }
+
+        public enum SnappingMode
+        {
+            Enabled = 0,
+            Low = 1,
+            Off = 2
         }
 
     }
