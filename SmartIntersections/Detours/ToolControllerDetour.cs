@@ -1,6 +1,6 @@
 ﻿using ColossalFramework;
 using Redirection;
-using SmartIntersections.Tools;
+using SmartIntersections.Utils;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
@@ -43,7 +43,7 @@ namespace SmartIntersections.Detours
                 //UnityEngine.Debug.Log("EndColliding caller: " + stackTrace.GetFrame(2).GetMethod().GetUnderlyingType() + " " + stackTrace.GetFrame(2).GetMethod().Name + " " + ", count: " + CollidingSegments.Count);
 
                 CollidingSegments.Clear();
-                foreach (int segment in NetAccess.SegmentsFromMask(___m_collidingSegments1))
+                foreach (int segment in NetUtil.SegmentsFromMask(___m_collidingSegments1))
                 {
 
                     CollidingSegments.Add((ushort)segment);

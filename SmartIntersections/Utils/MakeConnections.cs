@@ -1,4 +1,5 @@
-﻿using SmartIntersections.Tools;
+﻿using SmartIntersections.SharedEnvironment;
+using SmartIntersections.Utils;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -13,13 +14,19 @@ namespace SmartIntersections.Utils
         public static readonly float MIN_SEGMENT_LENGTH = 35;
         public static readonly float MAX_ANGLE = 45; // in deg
 
-        public MakeConnections(HashSet<ConnectionPoint> borderNodes, FastList<ushort> createdNodes)
+        private WrappersDictionary _networkDictionary;
+        private ActionGroup _actionGroup;
+
+        public MakeConnections(HashSet<ConnectionPoint> borderNodes, FastList<ushort> createdNodes, WrappersDictionary dictionary, ActionGroup actionGroup)
         {
             if (!UIWindow.instance.m_connectRoadsCheckBox.isChecked)
                 return;
 
             if (borderNodes == null)
                 return;
+
+            _networkDictionary = dictionary;
+            _actionGroup = actionGroup;
 
             HashSet<ushort> filteredCreatedNodes = FilterCreatedNodes(createdNodes);
             // (Border nodes are already filtered)
@@ -49,16 +56,16 @@ namespace SmartIntersections.Utils
             HashSet<ushort> filteredNodes = new HashSet<ushort>();
             foreach(ushort node in createdNodes)
             {
-                if (NetAccess.GetNode(node).CountSegments() == 1)
+                if (NetUtil.Node(node).CountSegments() == 1)
                     filteredNodes.Add(node);
             }
             return filteredNodes;
         }
 
-        private static bool TryConnect(ushort node1, ConnectionPoint cpoint)
+        private bool TryConnect(ushort node1, ConnectionPoint cpoint)
         {
-            NetNode netNode1 = NetAccess.GetNode(node1);
-            NetNode netNode2 = NetAccess.GetNode(cpoint.Node);
+            NetNode netNode1 = NetUtil.Node(node1);
+            NetNode netNode2 = NetUtil.Node(cpoint.Node);
 
             Vector3 differenceVector = netNode2.m_position - netNode1.m_position;
 
@@ -68,9 +75,9 @@ namespace SmartIntersections.Utils
             if (differenceVector.magnitude > MAX_NODE_DISTANCE)
                 return false;
 
-            ushort segment1 = NetAccess.GetFirstSegment(netNode1);
+            ushort segment1 = NetUtil.GetFirstSegment(netNode1);
             //ushort segment2 = NetAccess.GetFirstSegment(netNode2);
-            NetSegment netSegment1 = NetAccess.GetSegment(segment1);
+            NetSegment netSegment1 = NetUtil.Segment(segment1);
             //NetSegment netSegment2 = NetAccess.GetSegment(segment2);
 
             // 2) Check if both segments are roads
@@ -96,7 +103,7 @@ namespace SmartIntersections.Utils
             }
 
             // 4) Check if directions of one-way roads match (if so connect)
-            if ( NetAccess.IsOneWay(netSegment1.Info) && cpoint.NetInfo )
+            if ( NetUtil.IsOneWay(netSegment1.Info) && cpoint.NetInfo )
             {
                 if (SegmentDirectionBool(netSegment1, node1) ^ cpoint.DirectionBool)
                 {
@@ -123,12 +130,12 @@ namespace SmartIntersections.Utils
             return false;
         }
 
-        private static void Connect(ushort node1, ushort node2, Vector3 startDir, Vector3 endDir, NetInfo Info, bool invert = false)
+        private void Connect(ushort node1, ushort node2, Vector3 startDir, Vector3 endDir, NetInfo Info, bool invert = false)
         {
             //Debug.Log("Connectiong nodes " + node1 + " and " + node2);
 
-            NetNode netNode1 = NetAccess.GetNode(node1);
-            NetNode netNode2 = NetAccess.GetNode(node2);
+            NetNode netNode1 = NetUtil.Node(node1);
+            NetNode netNode2 = NetUtil.Node(node2);
 
             if ((netNode1.m_position - netNode2.m_position).magnitude < MIN_SEGMENT_LENGTH )
             {
@@ -138,7 +145,17 @@ namespace SmartIntersections.Utils
             //NetAccess.CreateSegment(node1,node2,(netNode2.m_position-netNode1.m_position).normalized, (netNode1.m_position - netNode2.m_position).normalized, info, invert);
             try
             {
-                NetAccess.CreateSegment(node1, node2, startDir, endDir, Info, invert);
+                WrappedSegment segmentW = new WrappedSegment();
+                segmentW.StartNode = _networkDictionary.RegisterNode(node1);
+                segmentW.EndNode = _networkDictionary.RegisterNode(node2);
+                segmentW.StartDirection = startDir;
+                segmentW.EndDirection = endDir;
+                segmentW.NetInfo = Info;
+                segmentW.Invert = invert;
+                _actionGroup.Actions.Add(segmentW);
+
+                segmentW.Create();
+                //NetUtil.CreateSegment(node1, node2, startDir, endDir, Info, invert);
             }
             catch(Exception e)
             {
@@ -147,18 +164,20 @@ namespace SmartIntersections.Utils
         }
 
         /* If node distance is too short, we travel one segment up from the border node and set the new node as the one to connect to */
-        private static void RepairShortSegment(ref Vector3 direction, ref ushort node)
+        private void RepairShortSegment(ref Vector3 direction, ref ushort node)
         {
             //Debug.Log("Repairing short segment...");
 
-            NetNode netNode = NetAccess.GetNode(node);
+            NetNode netNode = NetUtil.Node(node);
 
             // If there is more than one segment we cannot safely delete it (we don't even know from which segment we should pick)
             if (netNode.CountSegments() != 1)
                 return;
 
-            ushort segmentId = NetAccess.GetFirstSegment(netNode);
-            NetSegment netSegment = NetAccess.GetSegment(segmentId);
+            ushort segmentId = NetUtil.GetFirstSegment(netNode);
+            NetSegment netSegment = NetUtil.Segment(segmentId);
+
+            WrappedNode nodeW = _networkDictionary.RegisterNode(node);
 
             if (node == netSegment.m_startNode)
             {
@@ -170,8 +189,15 @@ namespace SmartIntersections.Utils
                 node = netSegment.m_startNode;
             }
 
-            NetAccess.ReleaseSegment(segmentId, true);
-                
+            WrappedSegment segmentW = _networkDictionary.RegisterSegment(segmentId);
+            _actionGroup.Actions.Add(segmentW);
+            _actionGroup.Actions.Add(nodeW);
+            segmentW.Release();
+            nodeW.Release();
+            segmentW.IsBuildAction = false;
+            nodeW.IsBuildAction = false;
+
+            //NetUtil.ReleaseSegment(segmentId, true);        
         }
 
         private static bool SegmentDirectionBool(NetSegment segment, ushort node)

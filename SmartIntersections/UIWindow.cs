@@ -13,13 +13,14 @@ namespace SmartIntersections
         private UIDropDown m_dropDown;
         private UICheckBox m_enabledCheckBox;
         public UICheckBox m_connectRoadsCheckBox;
+        public UIButton m_undoButton;
 
         public static readonly SavedBool SavedEnabled = new SavedBool("savedEnabled", ModInfo.SettingsFileName, true, true);
         public static readonly SavedInt SavedSnapping = new SavedInt("savedSnapping", ModInfo.SettingsFileName, 0, true);
         public static readonly SavedBool SavedConnectRoads = new SavedBool("savedConnectRoads", ModInfo.SettingsFileName, true, true);
 
-        private UIComponent m_intersectionPanel;
-        private UIComponent m_tollPanel;
+        public UIComponent m_intersectionPanel;
+        public UIComponent m_tollPanel;
 
         public UIWindow()
         {
@@ -122,6 +123,18 @@ namespace SmartIntersections
             m_dropDown.selectedIndex = SavedSnapping.value;
             m_dropDown.listPosition = UIDropDown.PopupListPosition.Above;
             cumulativeHeight += m_dropDown.height + 8;
+
+            m_undoButton = UI.CreateButton(this);
+            m_undoButton.text = "Undo";
+            m_undoButton.tooltip = "Remove last built intersection";
+            m_undoButton.relativePosition = new Vector2(8, cumulativeHeight);
+            m_undoButton.width = width - 16;
+            m_undoButton.isEnabled = false;
+            m_undoButton.eventClick += (c, p) =>
+            {
+                SmartIntersections.instance.Undo();
+            };
+            cumulativeHeight += m_undoButton.height + 8;
 
             height = cumulativeHeight;
             //absolutePosition = ModInfo.defWindowPosition;

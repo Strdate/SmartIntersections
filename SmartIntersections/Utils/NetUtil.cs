@@ -6,50 +6,54 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 
-namespace SmartIntersections.Tools
+namespace SmartIntersections.Utils
 {
-    public static class NetAccess
+    /* By Strad, 2019 */
+
+    /* This is a little library which makes net stuff (working with segments/nodes) easier. Feel free to reuse it */
+
+    public static class NetUtil
     {
-        public static bool ReleaseSegment(ushort id, bool tryReleaseNodes = false)
+        public static bool ReleaseSegment(ushort id, bool tryReleaseNodes = false, bool suppressWarnings = false)
         {
             if (id > 0 && (NetManager.instance.m_segments.m_buffer[id].m_flags & NetSegment.Flags.Created) != NetSegment.Flags.None)
             {
                 try
                 {
-                    ushort node1 = GetSegment(id).m_startNode;
-                    ushort node2 = GetSegment(id).m_endNode;
+                    ushort node1 = Segment(id).m_startNode;
+                    ushort node2 = Segment(id).m_endNode;
                     NetManager.instance.ReleaseSegment(id, true);
-                    if(tryReleaseNodes)
+                    if (tryReleaseNodes)
                     {
                         ReleaseNode(node1, true);
                         ReleaseNode(node2, true);
                     }
                     return true;
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
-                    Debug.LogWarning("Exception while releasing segment " + id + ": " + e);
+                    if (!suppressWarnings) Debug.LogWarning("Exception while releasing segment " + id + ": " + e);
                     return false;
                 }
             }
             else
             {
-                Debug.LogWarning("Failed to release NetSegment " + id);
+                if (!suppressWarnings) Debug.LogWarning("Failed to release NetSegment " + id + ": Segment does not exist");
                 return false;
             }
         }
 
         public static bool ReleaseNode(ushort id, bool suppressWarnings = false)
         {
-            if((GetNode(id).m_flags & NetNode.Flags.Created) == NetNode.Flags.None)
+            if ((Node(id).m_flags & NetNode.Flags.Created) == NetNode.Flags.None)
             {
                 if (!suppressWarnings) Debug.LogWarning("Failed to release NetNode " + id + ": Not Created");
                 return false;
             }
 
-            if (GetNode(id).CountSegments() > 0)
+            if (Node(id).CountSegments() > 0)
             {
-                if(!suppressWarnings) Debug.LogWarning("Failed to release NetNode " + id + ": Has segments");
+                if (!suppressWarnings) Debug.LogWarning("Failed to release NetNode " + id + ": Has segments");
                 return false;
             }
 
@@ -69,28 +73,43 @@ namespace SmartIntersections.Tools
         {
             var randomizer = Singleton<SimulationManager>.instance.m_randomizer;
             bool result = NetManager.instance.CreateNode(out ushort nodeId, ref randomizer, info, position,
-                Singleton<SimulationManager>.instance.m_currentBuildIndex + 1);
+                Singleton<SimulationManager>.instance.m_currentBuildIndex);
 
             if (!result)
                 throw new Exception("Failed to create NetNode at " + position.ToString());
 
+            Singleton<SimulationManager>.instance.m_currentBuildIndex++;
+
             return nodeId;
         }
 
-        public static ushort CreateSegment(ushort startNodeId, ushort endNodeId, Vector3 startDirection, Vector3 endDirection, NetInfo netInfo, bool invert = false, bool switchStartAndEnd = false)
+        public static ushort CreateSegment(ushort startNodeId, ushort endNodeId, Vector3 startDirection, Vector3 endDirection, NetInfo netInfo, bool invert = false, bool switchStartAndEnd = false, bool dispatchPlacementEffects = false)
         {
             var randomizer = Singleton<SimulationManager>.instance.m_randomizer;
 
-            if ((GetNode(startNodeId).m_flags & NetNode.Flags.Created) == NetNode.Flags.None || (GetNode(endNodeId).m_flags & NetNode.Flags.Created) == NetNode.Flags.None)
+            NetNode startNode = Node(startNodeId);
+            NetNode endNode = Node(endNodeId);
+
+            if ((startNode.m_flags & NetNode.Flags.Created) == NetNode.Flags.None || (endNode.m_flags & NetNode.Flags.Created) == NetNode.Flags.None)
                 throw new Exception("Failed to create NetSegment: Invalid node(s)");
 
             var result = NetManager.instance.CreateSegment(out ushort newSegmentId, ref randomizer, netInfo, switchStartAndEnd ? endNodeId : startNodeId,
                  switchStartAndEnd ? startNodeId : endNodeId,
-                 (switchStartAndEnd ? endDirection : startDirection), (switchStartAndEnd ? startDirection : endDirection), Singleton<SimulationManager>.instance.m_currentBuildIndex + 1,
+                 (switchStartAndEnd ? endDirection : startDirection), (switchStartAndEnd ? startDirection : endDirection), Singleton<SimulationManager>.instance.m_currentBuildIndex,
                          Singleton<SimulationManager>.instance.m_currentBuildIndex, invert);
 
             if (!result)
                 throw new Exception("Failed to create NetSegment");
+
+            Singleton<SimulationManager>.instance.m_currentBuildIndex++;
+
+            if (dispatchPlacementEffects)
+            {
+                bool smoothStart = (startNode.m_flags & NetNode.Flags.Middle) != NetNode.Flags.None;
+                bool smoothEnd = (endNode.m_flags & NetNode.Flags.Middle) != NetNode.Flags.None;
+                NetSegment.CalculateMiddlePoints(startNode.m_position, startDirection, endNode.m_position, endDirection, smoothStart, smoothEnd, out Vector3 b, out Vector3 c);
+                NetTool.DispatchPlacementEffect(startNode.m_position, b, c, endNode.m_position, netInfo.m_halfWidth, false);
+            }
 
             return newSegmentId;
         }
@@ -115,20 +134,30 @@ namespace SmartIntersections.Tools
             return (node.m_flags & NetNode.Flags.Created) != NetNode.Flags.None;
         }
 
+        public static ushort NetinfoToIndex(NetInfo netInfo)
+        {
+            return (ushort)Mathf.Clamp(netInfo.m_prefabDataIndex, 0, 65535);
+        }
+
+        public static NetInfo NetinfoFromIndex(ushort index)
+        {
+            return PrefabCollection<NetInfo>.GetPrefab(index);
+        }
+
         /* From Elektrix */
         public static bool DoSegmentsIntersect(ushort segment1, ushort segment2, out float t1, out float t2)
         {
             // First segment data
-            NetSegment s1 = GetSegment(segment1);
+            NetSegment s1 = Segment(segment1);
             Bezier3 bezier = default(Bezier3);
 
             // Second segment data
-            NetSegment s2 = GetSegment(segment2);
+            NetSegment s2 = Segment(segment2);
             Bezier3 secondBezier = default(Bezier3);
 
             // Turn the segment data into a Bezier2 for easier calculations supported by the game
-            bezier.a = GetNode(s1.m_startNode).m_position;
-            bezier.d = GetNode(s1.m_endNode).m_position;
+            bezier.a = Node(s1.m_startNode).m_position;
+            bezier.d = Node(s1.m_endNode).m_position;
 
             bool smoothStart = (Singleton<NetManager>.instance.m_nodes.m_buffer[s1.m_startNode].m_flags & NetNode.Flags.Middle) != NetNode.Flags.None;
             bool smoothEnd = (Singleton<NetManager>.instance.m_nodes.m_buffer[s1.m_endNode].m_flags & NetNode.Flags.Middle) != NetNode.Flags.None;
@@ -138,8 +167,8 @@ namespace SmartIntersections.Tools
             Bezier2 xz = Bezier2.XZ(bezier);
 
             // Second segment:
-            secondBezier.a = GetNode(s2.m_startNode).m_position;
-            secondBezier.d = GetNode(s2.m_endNode).m_position;
+            secondBezier.a = Node(s2.m_startNode).m_position;
+            secondBezier.d = Node(s2.m_endNode).m_position;
 
             smoothStart = (Singleton<NetManager>.instance.m_nodes.m_buffer[s2.m_startNode].m_flags & NetNode.Flags.Middle) != NetNode.Flags.None;
             smoothEnd = (Singleton<NetManager>.instance.m_nodes.m_buffer[s2.m_endNode].m_flags & NetNode.Flags.Middle) != NetNode.Flags.None;
@@ -158,12 +187,12 @@ namespace SmartIntersections.Tools
         /// <returns></returns>
         public static ushort GetFirstSegment(ushort nodeId)
         {
-            return GetFirstSegment(GetNode(nodeId));
+            return GetFirstSegment(Node(nodeId));
         }
 
         public static ushort GetFirstSegment(NetNode node)
         {
-            for(int i = 0; i < 8; i++)
+            for (int i = 0; i < 8; i++)
             {
                 if (node.GetSegment(i) != 0)
                     return node.GetSegment(i);
@@ -205,11 +234,11 @@ namespace SmartIntersections.Tools
         {
             get { return Singleton<NetManager>.instance; }
         }
-        public static ref NetNode GetNode(ushort id)
+        public static ref NetNode Node(ushort id)
         {
             return ref Manager.m_nodes.m_buffer[id];
         }
-        public static ref NetSegment GetSegment(ushort id)
+        public static ref NetSegment Segment(ushort id)
         {
             return ref Manager.m_segments.m_buffer[id];
         }

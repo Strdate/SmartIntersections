@@ -1,7 +1,7 @@
 ﻿using ColossalFramework;
 using ColossalFramework.Math;
 using Redirection;
-using SmartIntersections.Tools;
+using SmartIntersections.SharedEnvironment;
 using SmartIntersections.Utils;
 using System;
 using System.Collections.Generic;
@@ -34,67 +34,89 @@ namespace SmartIntersections.Detours
 
         #endregion DETOUR
 
-        private static HashSet<ConnectionPoint> ReleaseCollidingSegments()
+        private static WrappersDictionary _networkDictionary;
+        private static ActionGroup _actionGroup;
+        private static HashSet<ConnectionPoint> borderNodes;
+
+        // Called before intersection is built
+        private static void ReleaseCollidingSegments()
         {
             // We obtain a list of nodes adjacent to the deleted segment to know where to reconnect
             HashSet<ConnectionPoint> borderNodes = new HashSet<ConnectionPoint>();
             if (ToolControllerDetour.CollidingSegmentsCache2 == null)
-                return null;
+                return;
             foreach (ushort segment in ToolControllerDetour.CollidingSegmentsCache2)
             {
-                //Debug.Log("Releasing segment " + segment);
-                NetSegment netSegment = NetAccess.GetSegment(segment);
+                try
+                {
+                    //Debug.Log("Releasing segment " + segment);
+                    NetSegment netSegment = NetUtil.Segment(segment);
 
-                // We keep untouchable segments
-                if ((netSegment.m_flags & NetSegment.Flags.Untouchable) != NetSegment.Flags.None)
-                    continue;
+                    // We keep untouchable segments
+                    if ((netSegment.m_flags & NetSegment.Flags.Untouchable) != NetSegment.Flags.None)
+                        continue;
 
-                bool inverted = ((netSegment.m_flags & NetSegment.Flags.Invert) != NetSegment.Flags.None);
+                    bool inverted = ((netSegment.m_flags & NetSegment.Flags.Invert) != NetSegment.Flags.None);
 
-                borderNodes.Add(new ConnectionPoint(netSegment.m_startNode, netSegment.m_startDirection, netSegment.Info, inverted));
-                borderNodes.Add(new ConnectionPoint(netSegment.m_endNode, netSegment.m_endDirection, netSegment.Info, !inverted));
-                NetAccess.ReleaseSegment(segment, true);
+                    borderNodes.Add(new ConnectionPoint(netSegment.m_startNode, netSegment.m_startDirection, netSegment.Info, inverted));
+                    borderNodes.Add(new ConnectionPoint(netSegment.m_endNode, netSegment.m_endDirection, netSegment.Info, !inverted));
+
+                    WrappedSegment segmentW = _networkDictionary.RegisterSegment(segment);
+                    _actionGroup.Actions.Add(segmentW);
+                    segmentW.IsBuildAction = false;
+                    segmentW.Release();
+
+                    if (segmentW.StartNode.TryRelease())
+                    {
+                        _actionGroup.Actions.Add(segmentW.StartNode);
+                        segmentW.StartNode.IsBuildAction = false;
+                    }
+
+                    if (segmentW.EndNode.TryRelease())
+                    {
+                        _actionGroup.Actions.Add(segmentW.EndNode);
+                        segmentW.EndNode.IsBuildAction = false;
+                    }
+
+                    //NetUtil.ReleaseSegment(segment, true);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError(e);
+                }
             }
 
-            borderNodes.RemoveWhere(n => !NetAccess.ExistsNode(n.Node));
+            borderNodes.RemoveWhere(n => !NetUtil.ExistsNode(n.Node));
 
             ToolControllerDetour.CollidingSegmentsCache2 = null;
 
             //Debug.Log("Border nodes (1): " + borderNodes.Count);
 
-            return borderNodes;
+            BuildingDecorationDetour.borderNodes = borderNodes;
         }
 
-        // Solved by ReleaseQuestionableSegments
-        /*private static void CheckSplitSegmentAngle(ref NetTool.ControlPoint point, FastList<ushort> createdSegments, HashSet<ConnectionPoint> borderNodes)
+        // Called after intersection is built
+        private static void AfterIntersectionBuilt(BuildingInfo info, FastList<ushort> m_tempNodeBuffer, FastList<ushort> m_tempSegmentBuffer)
         {
-            if(point.m_segment != 0)
+            if (info.m_paths.Length > 0)
             {
-                if (createdSegments.Contains(point.m_segment))
-                    return;
-
-                if (point.m_node != 0)
-                    return;
-
-                Debug.Log("CheckSplitSegmentAngle: Snapping detected");
-                NetSegment netSegment = NetAccess.GetSegment(point.m_segment);
-                netSegment.GetClosestPositionAndDirection(point.m_position, out Vector3 pos, out Vector3 dir);
-                float angle = Vector3.Angle(point.m_direction, dir);
-                if(angle < 5 || 180 - angle < 5)
+                foreach (ushort node in m_tempNodeBuffer)
                 {
-                    Debug.Log("CheckSplitSegmentAngle: Releasing (" + angle + " deg)");
-                    bool inverted = ((netSegment.m_flags & NetSegment.Flags.Invert) != NetSegment.Flags.None);
-                    ConnectionPoint p1 = new ConnectionPoint(netSegment.m_startNode, netSegment.m_startDirection, netSegment.Info, inverted);
-                    ConnectionPoint p2 = new ConnectionPoint(netSegment.m_endNode, netSegment.m_endDirection, netSegment.Info, !inverted);
-                    NetAccess.ReleaseSegment(point.m_segment, true);
-                    if(NetAccess.ExistsNode(p1.Node) && NetAccess.ExistsNode(p2.Node))
-                    {
-                        borderNodes.Add(p1);
-                        borderNodes.Add(p2);
-                    }
+                    var nodeW = _networkDictionary.RegisterNode(node);
+                    _actionGroup.Actions.Add(nodeW);
                 }
+                foreach (ushort segment in m_tempSegmentBuffer)
+                {
+                    var segmentW = _networkDictionary.RegisterSegment(segment);
+                    _actionGroup.Actions.Add(segmentW);
+                }
+                ReleaseQuestionableSegments(m_tempNodeBuffer, m_tempSegmentBuffer);
+                new MakeConnections(borderNodes, m_tempNodeBuffer, _networkDictionary, _actionGroup);
+                _actionGroup.IsDone = true;
+
+                SmartIntersections.instance.PushGameAction(_actionGroup);
             }
-        }*/
+        }
 
         /* Sometimes the intersection end snaps to an existing road. But it can happen that the intersection road and the road it snaps to are (more or
          * less) parallel. Then we are left with a piece of old road overlapping the new road because the old segment for some reason doesn't show up as
@@ -103,7 +125,7 @@ namespace SmartIntersections.Detours
         {
             foreach (ushort node in newNodes)
             {
-                NetNode netNode = NetAccess.GetNode(node);
+                NetNode netNode = NetUtil.Node(node);
                 ushort foundSegment = 0;
                 for (int i = 0; i < 8; i++)
                 {
@@ -117,17 +139,36 @@ namespace SmartIntersections.Detours
                     }
                 }
 
-                Vector3 direction = NetAccess.GetSegment(foundSegment).GetDirection(node);
+                Vector3 direction = NetUtil.Segment(foundSegment).GetDirection(node);
                 for (int i = 0; i < 8; i++)
                 {
                     ushort segment = netNode.GetSegment(i);
                     if (segment != 0 && segment != foundSegment)
                     {
-                        float angle = Vector3.Angle(direction, NetAccess.GetSegment(segment).GetDirection(node));
+                        float angle = Vector3.Angle(direction, NetUtil.Segment(segment).GetDirection(node));
                         if (angle < 10)
                         {
                             //Debug.Log("Releasing questionable segment " + segment);
-                            NetAccess.ReleaseSegment(segment);
+                            //NetUtil.ReleaseSegment(segment);
+                            WrappedSegment segmentW = _networkDictionary.RegisterSegment(segment);
+                            _actionGroup.Actions.Add(segmentW);
+                            segmentW.IsBuildAction = false;
+                            segmentW.Release();
+
+                            if (segmentW.StartNode.TryRelease())
+                            {
+                                _actionGroup.Actions.Add(segmentW.StartNode);
+                                segmentW.StartNode.IsBuildAction = false;
+                            }
+
+                            if (segmentW.EndNode.TryRelease())
+                            {
+                                _actionGroup.Actions.Add(segmentW.EndNode);
+                                segmentW.EndNode.IsBuildAction = false;
+                            }
+                            /*WrappedSegment segmentW = _networkDictionary.RegisterSegment(segment);
+                            segmentW.Release();*/
+
                             goto breakOuterLoop;
                         }
                     }
@@ -146,11 +187,12 @@ namespace SmartIntersections.Detours
             if (info.m_paths != null)
             {
                 // ns start
-                HashSet<ConnectionPoint> borderNodes = null;
                 if (info.m_paths.Length > 0)
                 {
+                    _networkDictionary = new WrappersDictionary();
+                    _actionGroup = new ActionGroup("Build intersection");
                     //Debug.Log("LoadPaths detour");
-                    borderNodes = ReleaseCollidingSegments();
+                    ReleaseCollidingSegments();
                 }
                 // ns end
 
@@ -383,11 +425,7 @@ namespace SmartIntersections.Detours
                     }
                 }
                 // ns start
-                if (info.m_paths.Length > 0)
-                {
-                    ReleaseQuestionableSegments(instance.m_tempNodeBuffer, instance.m_tempSegmentBuffer);
-                    new MakeConnections(borderNodes, instance.m_tempNodeBuffer);
-                }
+                AfterIntersectionBuilt(info, instance.m_tempNodeBuffer, instance.m_tempSegmentBuffer);
                 // ns end    
                 instance.m_tempNodeBuffer.Clear();
                 instance.m_tempSegmentBuffer.Clear();

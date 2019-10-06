@@ -1,5 +1,8 @@
-﻿using Redirection;
+﻿using ColossalFramework;
+using ColossalFramework.UI;
+using Redirection;
 using SmartIntersections.Detours;
+using SmartIntersections.SharedEnvironment;
 using UnityEngine;
 
 namespace SmartIntersections
@@ -12,6 +15,8 @@ namespace SmartIntersections
         public static readonly string HarmonyID = "strad.smartintersections";
 
         //private HarmonyInstance _harmony;
+
+        private GameAction m_lastAction;
 
         private bool m_tempAnarchy;
         private bool m_tempCollision;
@@ -119,6 +124,28 @@ namespace SmartIntersections
         {
             instance = this;
             //_harmony = HarmonyInstance.Create(HarmonyID);
+        }
+
+        // SIMULATION THREAD
+        public void PushGameAction(GameAction action)
+        {
+            if(UIWindow.instance.m_intersectionPanel.isVisible) // Toll booths don't support undo
+            {
+                m_lastAction = action;
+                UIWindow.instance.m_undoButton.isEnabled = true;
+            }
+        }
+
+        public void Undo()
+        {
+            if(m_lastAction != null)
+            {
+                UIWindow.instance.m_undoButton.isEnabled = false;
+                Singleton<SimulationManager>.instance.AddAction(() => {
+                    m_lastAction.Undo();
+                    m_lastAction = null;
+                });
+            }
         }
 
         private void SetupAnarchy()

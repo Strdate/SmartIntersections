@@ -63,8 +63,13 @@
     <Compile Include="Detours\BuildingDecorationDetour.cs" />
     <Compile Include="Detours\NetInfoDetour.cs" />
     <Compile Include="Detours\ToolControllerDetour.cs" />
+    <Compile Include="GameActions\AbstractAction.cs" />
     <Compile Include="ModInfo.cs" />
     <Compile Include="ModLoadingExtension.cs" />
+    <Compile Include="NetWrappers\AbstractNetWrapper.cs" />
+    <Compile Include="NetWrappers\WrappedNode.cs" />
+    <Compile Include="NetWrappers\WrappedSegment.cs" />
+    <Compile Include="NetWrappers\WrappersDictionary.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Redirection\RedirectionHelper.cs" />
     <Compile Include="Redirection\RedirectionUtil.cs" />
@@ -76,7 +81,7 @@
     <Compile Include="SmartIntersections.cs" />
     <Compile Include="UIWindow.cs" />
     <Compile Include="Utils\MakeConnections.cs" />
-    <Compile Include="Utils\NetAccess.cs" />
+    <Compile Include="Utils\NetUtil.cs" />
     <Compile Include="Utils\ResourceLoader.cs" />
     <Compile Include="Utils\UIUtils.cs" />
   </ItemGroup>

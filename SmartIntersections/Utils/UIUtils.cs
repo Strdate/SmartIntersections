@@ -51,6 +51,7 @@ namespace SmartIntersections.Utils
             button.normalBgSprite = "ButtonMenu";
             button.hoveredBgSprite = "ButtonMenuHovered";
             button.pressedBgSprite = "ButtonMenuPressed";
+            button.disabledBgSprite = "ButtonMenuDisabled";
             button.canFocus = false;
             button.playAudioEvents = true;
 
