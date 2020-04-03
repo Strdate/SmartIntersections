@@ -140,17 +140,28 @@ namespace SmartIntersections
             //absolutePosition = ModInfo.defWindowPosition;
 
             m_intersectionPanel = UIView.Find("RoadsIntersectionPanel");
-            m_intersectionPanel.eventVisibilityChanged += (comp, value) =>
+            if(m_intersectionPanel != null)
             {
-                //Debug.Log("Roads panel: visibility " + value);
-                isVisible = (m_intersectionPanel.isVisible || m_tollPanel.isVisible);
-            };
+                m_intersectionPanel.eventVisibilityChanged += (comp, value) =>
+                {
+                    //Debug.Log("Roads panel: visibility " + value);
+                    isVisible = IsIntersetionsPanelVisible();
+                };
+            }
             m_tollPanel = UIView.Find("RoadsRoadTollsPanel");
-            m_tollPanel.eventVisibilityChanged += (comp, value) =>
+            if (m_tollPanel != null)
             {
-                //Debug.Log("Tolls panel: visibility " + value);
-                isVisible = (m_intersectionPanel.isVisible || m_tollPanel.isVisible);
-            };
+                m_tollPanel.eventVisibilityChanged += (comp, value) =>
+                {
+                    //Debug.Log("Tolls panel: visibility " + value);
+                    isVisible = IsIntersetionsPanelVisible();
+                };
+            }
+        }
+
+        private bool IsIntersetionsPanelVisible()
+        {
+            return (m_intersectionPanel != null ? m_intersectionPanel.isVisible : false) || (m_tollPanel != null ? m_tollPanel.isVisible : false);
         }
 
         /* Activates the tool if window is visible and the 'Enabled' checkbox checked */

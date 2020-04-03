@@ -66,6 +66,7 @@
     <Compile Include="GameActions\AbstractAction.cs" />
     <Compile Include="ModInfo.cs" />
     <Compile Include="ModLoadingExtension.cs" />
+    <Compile Include="ModThreadingExtension.cs" />
     <Compile Include="NetWrappers\AbstractNetWrapper.cs" />
     <Compile Include="NetWrappers\WrappedNode.cs" />
     <Compile Include="NetWrappers\WrappedSegment.cs" />

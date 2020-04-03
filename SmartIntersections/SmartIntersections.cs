@@ -98,6 +98,8 @@ namespace SmartIntersections
             }
         }
 
+        public bool FollowPrefabSelection { get; set; } = false;
+
         private void ApplySnapping()
         {
             //Debug.Log("Is anarchy snapping deployed? " + FineRoadAnarchy.Redirection.Redirector<FineRoadAnarchy.Detours.NetInfoDetour>.IsDeployed());
@@ -124,6 +126,17 @@ namespace SmartIntersections
         {
             instance = this;
             //_harmony = HarmonyInstance.Create(HarmonyID);
+        }
+
+        public void FollowFindItSelection()
+        {
+            ToolBase currentTool = ToolsModifierControl.toolController.CurrentTool;
+            BuildingTool buildingTool = currentTool as BuildingTool;
+            if(buildingTool?.m_prefab != null)
+            {
+                var prefab = buildingTool.m_prefab;
+                UIWindow.instance.isVisible = prefab.category == "RoadsIntersection" || prefab.category == "RoadsRoadTolls";
+            }
         }
 
         // SIMULATION THREAD
