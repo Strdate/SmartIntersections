@@ -69,11 +69,11 @@ namespace SmartIntersections
 
         #region HARMONY
         public const string HARMONY_ID = "strad.smartintersections";
-        public void InstallHarmony()
+        public static void InstallHarmony()
         {
             new Harmony(HARMONY_ID).PatchAll();
         }
-        public void UninstallHarmony()
+        public static void UninstallHarmony()
         {
             new Harmony(HARMONY_ID).UnpatchAll(HARMONY_ID);
         }

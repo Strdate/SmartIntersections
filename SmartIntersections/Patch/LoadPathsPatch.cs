@@ -92,19 +92,21 @@ namespace SmartIntersections.Patches
 
         public static IEnumerable<CodeInstruction> Transpiler(ILGenerator il, IEnumerable<CodeInstruction> instructions)
         {
-            var fTempNodeBuffer = AccessTools.DeclaredField(typeof(NetManager), nameof(NetManager.m_tempNodeBuffer));
-            var mClear = AccessTools.DeclaredMethod(typeof(FastList<ushort>), nameof(FastList<ushort>.Clear));
+            var fTempNodeBuffer = AccessTools.DeclaredField(typeof(NetManager), nameof(NetManager.m_tempNodeBuffer))
+                ?? throw new Exception("cound not find NetManager.m_tempNodeBuffer");
+            var mClear = AccessTools.DeclaredMethod(fTempNodeBuffer.FieldType, nameof(FastList<ushort>.Clear))
+                ?? throw new Exception("cound not find m_tempNodeBuffer.Clear");
             var mAfterIntersectionBuilt = AccessTools.DeclaredMethod(
-                typeof(LoadPathsPatch), nameof(LoadPathsPatch.AfterIntersectionBuilt));
+                typeof(LoadPathsPatch), nameof(AfterIntersectionBuilt))
+                ?? throw new Exception("cound not find AfterIntersectionBuilt()");
 
             List<CodeInstruction> codes = TranspilerUtils.ToCodeList(instructions);
             bool comp(int i) =>
-                codes[i].opcode == OpCodes.Ldfld && codes[i + 1].operand == fTempNodeBuffer &&
+                codes[i].opcode == OpCodes.Ldfld && codes[i].operand == fTempNodeBuffer &&
                 codes[i + 1].opcode == OpCodes.Callvirt && codes[i + 1].operand == mClear;
             int index = TranspilerUtils.SearchGeneric(codes, comp, index: 0, counter: 2);
             index -= 1; // index to insert instructions.
 
-            var ldargInfo = new CodeInstruction(OpCodes.Ldarg_0);
             var newInstructions = new[] {
                 new CodeInstruction(OpCodes.Ldarg_0), // load info
                 new CodeInstruction(OpCodes.Call, mAfterIntersectionBuilt),
@@ -112,9 +114,7 @@ namespace SmartIntersections.Patches
 
             TranspilerUtils.InsertInstructions(codes, newInstructions, index);
             return codes;
-
         }
-
 
         // Called after intersection is built
         internal static void AfterIntersectionBuilt(BuildingInfo info)
