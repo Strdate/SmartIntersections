@@ -4,6 +4,7 @@ using ICities;
 using System;
 using System.Linq;
 using UnityEngine;
+using HarmonyLib;
 
 namespace SmartIntersections
 {
@@ -52,16 +53,30 @@ namespace SmartIntersections
             {
                 UIView.GetAView().AddUIComponent(typeof(UIWindow));                
             }
+
+            InstallHarmony();
         }
 
         public void OnLevelUnloading()
         {
-            
+            UninstallHarmony();
         }
 
         public void OnReleased()
         {
             
         }
+
+        #region HARMONY
+        public const string HARMONY_ID = "strdate.SmartIntersectionBuilder";
+        public void InstallHarmony()
+        {
+            new Harmony(HARMONY_ID).PatchAll();
+        }
+        public void UninstallHarmony()
+        {
+            new Harmony(HARMONY_ID).UnpatchAll(HARMONY_ID);
+        }
+        #endregion
     }
 }
