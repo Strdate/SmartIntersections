@@ -76,6 +76,7 @@ namespace SmartIntersections.Patches
 
         public static void Prefix(BuildingInfo info)
         {
+            if (!SmartIntersections.instance.Active) return;
             if (info.m_paths != null)
             {
                 // ns start
@@ -118,6 +119,7 @@ namespace SmartIntersections.Patches
         // Called after intersection is built
         internal static void AfterIntersectionBuilt(BuildingInfo info)
         {
+            if (!SmartIntersections.instance.Active) return;
             var m_tempNodeBuffer = NetManager.instance.m_tempNodeBuffer;
             var m_tempSegmentBuffer =  NetManager.instance.m_tempSegmentBuffer;
             if (info.m_paths.Length > 0)

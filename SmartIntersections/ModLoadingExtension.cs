@@ -68,7 +68,7 @@ namespace SmartIntersections
         }
 
         #region HARMONY
-        public const string HARMONY_ID = "strdate.SmartIntersectionBuilder";
+        public const string HARMONY_ID = "strad.smartintersections";
         public void InstallHarmony()
         {
             new Harmony(HARMONY_ID).PatchAll();
