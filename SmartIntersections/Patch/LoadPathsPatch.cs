@@ -108,7 +108,7 @@ namespace SmartIntersections.Patches
             index -= 1; // index to insert instructions.
 
             var newInstructions = new[] {
-                new CodeInstruction(OpCodes.Ldarg_0), // load info
+                new CodeInstruction(OpCodes.Ldarg_0), // load argument info
                 new CodeInstruction(OpCodes.Call, mAfterIntersectionBuilt),
             };
 

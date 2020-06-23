@@ -38,7 +38,7 @@ namespace SmartIntersections
             }
         }
 
-#if false // install harmony early for testing purposes.
+#if false // install harmony early for fast testing. set to false before in game testing.
         public void OnEnabled() =>
             CitiesHarmony.API.HarmonyHelper.DoOnHarmonyReady(ModLoadingExtension.InstallHarmony);
         

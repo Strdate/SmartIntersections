@@ -7,6 +7,7 @@ namespace SmartIntersections.Patches {
     using System.Reflection;
     using System.Linq;
     using System.Diagnostics;
+    using UnityEngine;
 
     public static class TranspilerUtils {
         static bool VERBOSE => false;
@@ -249,9 +250,14 @@ namespace SmartIntersections.Patches {
             codes.InsertRange(index, insertion);
 
             if (VERBOSE)
+            {
                 Log("\n" + insertion.IL2STR());
-            if (VERBOSE)
-                Log("PEEK:\n" + codes.GetRange(index - 4, insertion.Length+12).IL2STR());
+                int start = index - 4;
+                if (start < 0) start = 0;
+                int count = insertion.Length + 12;
+                if (count + start >= codes.Count) count = codes.Count - start - 1;
+                Log("PEEK:\n" + codes.GetRange(start, count).IL2STR());
+            }
         }
     }
 }
