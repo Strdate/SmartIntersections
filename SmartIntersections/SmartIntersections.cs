@@ -12,9 +12,6 @@ namespace SmartIntersections
     public class SmartIntersections : MonoBehaviour
     {
         public static SmartIntersections instance;
-        public static readonly string HarmonyID = "strad.smartintersections";
-
-        //private HarmonyInstance _harmony;
 
         private GameAction m_lastAction;
 
@@ -63,21 +60,12 @@ namespace SmartIntersections
                     {
                         //Debug.Log("Deploying detour...");
                         SetupAnarchy();
-                        //ToolControllerDetour.Apply(_harmony);
-                        //BuildingDecorationDetour.Apply(_harmony);
                         Redirector<ToolControllerDetour>.Deploy();
-                        Redirector<BuildingDecorationDetour>.Deploy();
                     }
                     else
                     {
                         //Debug.Log("Reverting detour...");
-                        Redirector<BuildingDecorationDetour>.Revert();
                         Redirector<ToolControllerDetour>.Revert();
-                        //_harmony.UnpatchAll(HarmonyID);
-                        // ToolControllerDetour.Revert(_harmony);
-                        //NetManagerDetour.Revert(_harmony);
-                        //NetToolDetour.Revert(_harmony);
-                        //BuildingDecorationDetour.Revert(_harmony);
                         RevertAnarchy();
                     }
                 }
@@ -98,7 +86,19 @@ namespace SmartIntersections
             }
         }
 
-        public bool FollowPrefabSelection { get; set; } = false;
+        private bool m_followPrefabSelection = false;
+        public bool FollowPrefabSelection
+        {
+            get => m_followPrefabSelection;
+            set
+            {
+                m_followPrefabSelection = value;
+                if (!value)
+                {
+                    UIWindow.instance.isVisible = false;
+                }
+            }
+        }
 
         private void ApplySnapping()
         {
@@ -125,7 +125,6 @@ namespace SmartIntersections
         public SmartIntersections()
         {
             instance = this;
-            //_harmony = HarmonyInstance.Create(HarmonyID);
         }
 
         public void FollowFindItSelection()
@@ -136,6 +135,12 @@ namespace SmartIntersections
             {
                 var prefab = buildingTool.m_prefab;
                 UIWindow.instance.isVisible = prefab.category == "RoadsIntersection" || prefab.category == "RoadsRoadTolls";
+            } else
+            {
+                if(UIWindow.instance != null)
+                {
+                    UIWindow.instance.isVisible = UIWindow.instance.IsIntersetionsPanelVisible(); // This check is probably useless, it should be enough to set false
+                }
             }
         }
 
@@ -177,12 +182,7 @@ namespace SmartIntersections
 
         public void OnDestroy()
         {
-            Redirector<BuildingDecorationDetour>.Revert();
             Redirector<ToolControllerDetour>.Revert();
-            //_harmony.UnpatchAll(HarmonyID);
-            /*ToolControllerDetour.Revert(_harmony);
-            NetManagerDetour.Revert(_harmony);
-            NetToolDetour.Revert(_harmony);*/
         }
 
         public enum SnappingMode
@@ -191,6 +191,5 @@ namespace SmartIntersections
             Low = 1,
             Off = 2
         }
-
     }
 }
