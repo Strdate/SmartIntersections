@@ -131,5 +131,15 @@ namespace SmartIntersections.Utils
 
             return _atlases[name];
         }
+
+        // Ripped from Elektrix
+        public static void SetupButtonStateSprites(ref UIButton button, string spriteName, bool noNormal = false)
+        {
+            button.normalBgSprite = spriteName + (noNormal ? "" : "Normal");
+            button.hoveredBgSprite = spriteName + "Hovered";
+            button.focusedBgSprite = spriteName + "Focused";
+            button.pressedBgSprite = spriteName + "Pressed";
+            button.disabledBgSprite = spriteName + "Disabled";
+        }
     }
 }

@@ -1,5 +1,6 @@
-﻿using ColossalFramework;
-using HarmonyLib;
+﻿using CitiesHarmony.API;
+using ColossalFramework;
+using ColossalFramework.PlatformServices;
 using ICities;
 using System;
 using UnityEngine;
@@ -9,6 +10,8 @@ namespace SmartIntersections
     public class ModInfo : IUserMod
     {
         public static readonly string SettingsFileName = "SmartIntersections";
+
+        public static PublishedFileId WORKSHOP_FILE_ID = new PublishedFileId(1677913611uL);
 
         public static readonly Version VERSION = typeof(ModInfo).Assembly.GetName().Version;
         public static readonly string VERSION_STRING = "BETA " + VERSION.ToString(3);
@@ -38,13 +41,11 @@ namespace SmartIntersections
             }
         }
 
-#if false // install harmony early for fast testing. set to false before in game testing.
-        public void OnEnabled() =>
-            CitiesHarmony.API.HarmonyHelper.DoOnHarmonyReady(ModLoadingExtension.InstallHarmony);
+        public void OnEnabled()
+        {
+            HarmonyHelper.EnsureHarmonyInstalled();
+        }
         
-        public void OnDisabled() =>
-            ModLoadingExtension.UninstallHarmony();
-#endif
     }
 
 }

@@ -3,6 +3,7 @@ using ColossalFramework.UI;
 using SmartIntersections.Utils;
 using FineRoadAnarchy;
 using UnityEngine;
+using ColossalFramework.PlatformServices;
 
 namespace SmartIntersections
 {
@@ -66,6 +67,29 @@ namespace SmartIntersections
             dragHandle.width = width;
             dragHandle.relativePosition = Vector3.zero;
             dragHandle.target = parent;
+
+            // From Elektrix's Road Tools
+            UIButton openDescription = AddUIComponent<UIButton>();
+            openDescription.relativePosition = new Vector3(width - 24f, 8f);
+            openDescription.size = new Vector3(15f, 15f);
+            openDescription.normalFgSprite = "ToolbarIconHelp";
+            openDescription.name = "RAB_workshopButton";
+            openDescription.tooltip = "Smart Intersection Builder [" + ModInfo.VERSION + "] by Strad\nOpen in Steam Workshop";
+            UI.SetupButtonStateSprites(ref openDescription, "OptionBase", true);
+            if (!PlatformService.IsOverlayEnabled())
+            {
+                openDescription.isVisible = false;
+                openDescription.isEnabled = false;
+            }
+            openDescription.eventClicked += delegate (UIComponent component, UIMouseEventParameter click)
+            {
+                if (PlatformService.IsOverlayEnabled() && ModInfo.WORKSHOP_FILE_ID != null)
+                {
+                    PlatformService.ActivateGameOverlayToWorkshopItem(ModInfo.WORKSHOP_FILE_ID);
+                }
+                openDescription.Unfocus();
+            };
+            // -- Elektrix
 
             float cumulativeHeight = 8;
 
@@ -159,7 +183,7 @@ namespace SmartIntersections
             }
         }
 
-        private bool IsIntersetionsPanelVisible()
+        public bool IsIntersetionsPanelVisible()
         {
             return (m_intersectionPanel != null ? m_intersectionPanel.isVisible : false) || (m_tollPanel != null ? m_tollPanel.isVisible : false);
         }

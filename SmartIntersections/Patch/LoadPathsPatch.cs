@@ -71,7 +71,7 @@ namespace SmartIntersections.Patches
 
             //Debug.Log("Border nodes (1): " + borderNodes.Count);
 
-            borderNodes = borderNodes;
+            LoadPathsPatch.borderNodes = borderNodes;
         }
 
         public static void Prefix(BuildingInfo info)

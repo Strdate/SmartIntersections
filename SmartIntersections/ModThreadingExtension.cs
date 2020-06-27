@@ -9,23 +9,38 @@ namespace SmartIntersections
 {
     public class ModThreadingExtension : ThreadingExtensionBase
     {
-        private bool m_firstRun = true;
+        private bool m_init = true;
+        private int counter = 0;
+        private int skipCounter = 0;
 
         public override void OnUpdate(float realTimeDelta, float simulationTimeDelta)
         {
-            if (m_firstRun)
+            if ((skipCounter & 3) != 0)
             {
-                m_firstRun = false;
+                skipCounter++;
+                return;
+            }
+
+            skipCounter = 1;
+
+            if (m_init)
+            {
+                counter++;
+                if (counter > 3000)
+                {
+                    m_init = false;
+                }
                 UIComponent findItPanel = UIView.Find("FindItDefaultPanel");
                 if (findItPanel != null)
                 {
+                    m_init = false;
                     findItPanel.eventVisibilityChanged += (comp, value) =>
                     {
                         SmartIntersections.instance.FollowPrefabSelection = value;
                     };
                 }
             }
-            if(SmartIntersections.instance != null && SmartIntersections.instance.FollowPrefabSelection)
+            if (SmartIntersections.instance != null && SmartIntersections.instance.FollowPrefabSelection)
             {
                 SmartIntersections.instance.FollowFindItSelection();
             }

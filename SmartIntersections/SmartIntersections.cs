@@ -86,7 +86,19 @@ namespace SmartIntersections
             }
         }
 
-        public bool FollowPrefabSelection { get; set; } = false;
+        private bool m_followPrefabSelection = false;
+        public bool FollowPrefabSelection
+        {
+            get => m_followPrefabSelection;
+            set
+            {
+                m_followPrefabSelection = value;
+                if (!value)
+                {
+                    UIWindow.instance.isVisible = false;
+                }
+            }
+        }
 
         private void ApplySnapping()
         {
@@ -123,6 +135,12 @@ namespace SmartIntersections
             {
                 var prefab = buildingTool.m_prefab;
                 UIWindow.instance.isVisible = prefab.category == "RoadsIntersection" || prefab.category == "RoadsRoadTolls";
+            } else
+            {
+                if(UIWindow.instance != null)
+                {
+                    UIWindow.instance.isVisible = UIWindow.instance.IsIntersetionsPanelVisible(); // This check is probably useless, it should be enough to set false
+                }
             }
         }
 
