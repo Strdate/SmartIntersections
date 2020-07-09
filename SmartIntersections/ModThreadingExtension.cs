@@ -26,7 +26,7 @@ namespace SmartIntersections
             if (m_init)
             {
                 counter++;
-                if (counter > 3000)
+                if (counter > 20)
                 {
                     m_init = false;
                 }
