@@ -253,5 +253,10 @@ namespace SmartIntersections.Utils
             }
             return false;
         }
+
+        public static Vector2 xz(this Vector3 vector)
+        {
+            return new Vector2(vector.x, vector.z);
+        }
     }
 }

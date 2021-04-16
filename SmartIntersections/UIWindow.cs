@@ -74,7 +74,7 @@ namespace SmartIntersections
             openDescription.size = new Vector3(15f, 15f);
             openDescription.normalFgSprite = "ToolbarIconHelp";
             openDescription.name = "RAB_workshopButton";
-            openDescription.tooltip = "Smart Intersection Builder [" + ModInfo.VERSION + "] by Strad\nOpen in Steam Workshop";
+            openDescription.tooltip = "Smart Intersection Builder [" + ModInfo.VERSION_STRING + "] by Strad\nOpen in Steam Workshop";
             UI.SetupButtonStateSprites(ref openDescription, "OptionBase", true);
             if (!PlatformService.IsOverlayEnabled())
             {
