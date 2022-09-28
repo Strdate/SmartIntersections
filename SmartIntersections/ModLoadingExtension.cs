@@ -12,23 +12,22 @@ namespace SmartIntersections
     {
         public static bool roadAnarchyDetected = false;
 
-        public static readonly UInt64[] FineRoadAnarchy_IDs = { 802066100, 1844440354 };
+        //public static readonly UInt64[] FineRoadAnarchy_IDs = { 802066100, 1844440354 };
+        public static readonly UInt64[] NETWORK_ANARCHY_IDs = { 2862881785 };
 
         public void OnCreated(ILoading loading)
         {
             foreach (PluginManager.PluginInfo current in PluginManager.instance.GetPluginsInfo())
             {
-                if ((current.isEnabled && FineRoadAnarchy_IDs.Contains( current.publishedFileID.AsUInt64 ) || current.name.Contains("FineRoadAnarchy"))) // Fine road anarchy dependency
-                {
+                if (current.isEnabled && (current.name.Contains("NetworkAnarchy") || NETWORK_ANARCHY_IDs.Contains(current.publishedFileID.AsUInt64))) {
                     roadAnarchyDetected = true;
                     break;
-                    //Debug.Log("[Fine Road Anarchy detected!]");
                 }
             }
 
             if(!roadAnarchyDetected)
             {
-                Debug.LogWarning("Mod 'Smart Intersection Builder' requires 'Fine Road Anarchy' to work.");
+                Debug.LogWarning("Mod 'Smart Intersection Builder' requires 'Network Anarchy' to work.");
             }
         }
 
@@ -37,9 +36,9 @@ namespace SmartIntersections
             if(!roadAnarchyDetected)
             {
                 ExceptionPanel panel = UIView.library.ShowModal<ExceptionPanel>("ExceptionPanel");
-                panel.SetMessage("Smart Intersection Builder", "Mod 'Smart Intersection Builder' requires mod 'Fine Road Anarchy' or 'Fine Road Anarchy 2' as dependency. " +
-                    "Make sure it is installed and enabled in content manager. (If you are using local version of Fine Road Anarchy, make sure it is located in a folder " +
-                    "called 'FineRoadAnarchy')", true);
+                panel.SetMessage("Smart Intersection Builder", "Mod 'Smart Intersection Builder' requires mod 'Network Anarchy' as dependency. " +
+                    "Make sure it is installed and enabled in content manager. (If you are using local version of Network Anarchy, make sure it is located in a folder " +
+                    "called 'NetworkAnarchy')", true);
             }
 
             if (SmartIntersections.instance == null)

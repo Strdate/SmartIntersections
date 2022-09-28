@@ -13,7 +13,7 @@ namespace SmartIntersections
 
         public static PublishedFileId WORKSHOP_FILE_ID = new PublishedFileId(1677913611uL);
 
-        public static readonly string VERSION_STRING = "1.1.0";
+        public static readonly string VERSION_STRING = "1.1.1";
 
         public string Name => "Smart Intersection Builder";
 

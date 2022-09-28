@@ -30,16 +30,7 @@ namespace SmartIntersections
                 if(value != m_windowOnScreen)
                 {
                     m_windowOnScreen = value;
-                    if(value)
-                    {
-                        FineRoadAnarchy.Redirection.Redirector<FineRoadAnarchy.Detours.NetInfoDetour>.Revert();
-                        ApplySnapping();
-                    }
-                    else
-                    {
-                        ApplySnapping();
-                        FineRoadAnarchy.Redirection.Redirector<FineRoadAnarchy.Detours.NetInfoDetour>.Deploy();
-                    }
+                    ApplySnapping();
                 }
             }
         }
@@ -168,16 +159,16 @@ namespace SmartIntersections
 
         private void SetupAnarchy()
         {
-            m_tempAnarchy = FineRoadAnarchy.FineRoadAnarchy.anarchy;
-            FineRoadAnarchy.FineRoadAnarchy.anarchy = true;
-            m_tempCollision = FineRoadAnarchy.FineRoadAnarchy.collision;
-            FineRoadAnarchy.FineRoadAnarchy.collision = true;            
+            m_tempAnarchy = NetworkAnarchy.NetworkAnarchy.Anarchy;
+            NetworkAnarchy.NetworkAnarchy.Anarchy = true;
+            m_tempCollision = NetworkAnarchy.NetworkAnarchy.Collision;
+            NetworkAnarchy.NetworkAnarchy.Collision = true;            
         }
 
         private void RevertAnarchy()
         {
-            FineRoadAnarchy.FineRoadAnarchy.anarchy = m_tempAnarchy;
-            FineRoadAnarchy.FineRoadAnarchy.collision = m_tempCollision;
+            NetworkAnarchy.NetworkAnarchy.Anarchy = m_tempAnarchy;
+            NetworkAnarchy.NetworkAnarchy.Collision = m_tempCollision;
         }
 
         public void OnDestroy()

@@ -1,7 +1,6 @@
 ﻿using ColossalFramework;
 using ColossalFramework.UI;
 using SmartIntersections.Utils;
-using FineRoadAnarchy;
 using UnityEngine;
 using ColossalFramework.PlatformServices;
 
